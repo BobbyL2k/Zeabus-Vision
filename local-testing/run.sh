@@ -16,7 +16,6 @@ rc=$?
 printf "${Cyan}"
 echo "compiled ended with code" $rc
 printf "${NoColor}"
-# echo [[ $0 = 0 ]]
 if [[ $rc = 0 ]]; then
   printf "${Green}"
   echo "=========    Running local-test    ========="
