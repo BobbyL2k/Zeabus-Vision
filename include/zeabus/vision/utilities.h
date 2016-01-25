@@ -11,9 +11,23 @@ namespace cv{
 
     typedef Scalar Color;
 
+    const int
+    BGR_B = 0,
+    BGR_G = 1,
+    BGR_R = 2,
+    RGB_R = 0,
+    RGB_G = 1,
+    RGB_B = 2,
+    YUV_Y = 0,
+    YUV_U = 1,
+    YUV_V = 2,
+    HSV_H = 0,
+    HSV_S = 1,
+    HSV_V = 2;
+
     const Color red(0,0,255), green(0,255,0), blue(255,0,0), yellow(0,255,255);
 
-    bool pointInsideContour(Point p , Contour c){
+    bool pointInsideContour(const Point& p , const Contour& c){
         return pointPolygonTest(c, p, false) >= 0;
     }
 
@@ -49,7 +63,7 @@ namespace cv{
         return Scalar(r,g,b,255);
     }
 
-    void smoothEdges(Mat inputImage, Mat outputImage, int size, int minSize){
+    void smoothEdges(InputArray inputImage, OutputArray outputImage, int size, int minSize){
 
         Mat firstPassEllipse = getStructuringElement( MORPH_ELLIPSE, Size(minSize, minSize)),
         secondPassEllipse = getStructuringElement( MORPH_ELLIPSE, Size(size + minSize, size + minSize)),
@@ -60,4 +74,28 @@ namespace cv{
         erode( outputImage, outputImage, thirdPassEllipse );
     }
 
+    void findContoursInRange(InputArray img, Contours& contours, std::vector<Vec4i> objectHierarchy, double sdRange, bool invert, const Color& colorMean, const Color& colorStdDev){
+
+        Mat localImg;
+
+        inRange(img,
+            colorMean - colorStdDev*sdRange,
+            colorMean + colorStdDev*sdRange,
+            localImg);
+
+        const int edgeSmoothingFactorSize = 15, edgeSmoothingFactorSizeMin = 3;
+        smoothEdges(localImg, localImg, edgeSmoothingFactorSize, edgeSmoothingFactorSizeMin);
+
+        if(invert){
+            bitwise_not(localImg, localImg);
+        }
+
+        findContours(localImg, contours, objectHierarchy, CV_RETR_CCOMP, CV_CHAIN_APPROX_SIMPLE);
+    }
+
+    void findContoursInRange(InputArray img, Contours& contours, std::vector<Vec4i> objectHierarchy, double sdRange, bool invert){
+        Color colorMean, colorStdDev;
+        meanStdDev(img, colorMean, colorStdDev);
+        findContoursInRange(img, contours, objectHierarchy, sdRange, invert, colorMean, colorStdDev);
+    }
 }
