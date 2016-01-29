@@ -2,7 +2,7 @@
 clear
 
 # FILES="../src/utilities.cpp test.cpp"
-FILES="unittest.cpp"
+FILES="test.cpp"
 
 # COLORS http://stackoverflow.com/questions/5947742/how-to-change-the-output-color-of-echo-in-linux
 Red="\033[0;31m"

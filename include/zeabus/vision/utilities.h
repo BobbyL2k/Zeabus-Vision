@@ -19,6 +19,10 @@ namespace cv{
 
     typedef Scalar Color;
 
+    const double
+    RAD2DEG = 180 / CV_PI,
+    DEG2RAD = CV_PI / 180;
+
     const int
     BGR_B = 0,
     BGR_G = 1,
@@ -98,7 +102,19 @@ namespace cv{
             bitwise_not(localImg, localImg);
         }
 
-        findContours(localImg, contours, objectHierarchy, CV_RETR_CCOMP, CV_CHAIN_APPROX_SIMPLE);
+        // Contours tempContours;
+
+        findContours(localImg, contours, objectHierarchy, CV_RETR_CCOMP, CV_CHAIN_APPROX_TC89_L1);
+
+        // contours.clear();
+        // for(Contour contour : tempContours){
+        //     Contour toAdd;
+        //     for(int c=0; c<contour.size(); c=+10){
+        //         toAdd.push_back(contour[c]);
+        //     }
+        //     contours.push_back(toAdd);
+        // }
+
     }
 
     void findContoursInRange(InputArray img, Contours& contours, std::vector<Vec4i> objectHierarchy, double sdRange, bool invert){
@@ -111,6 +127,9 @@ namespace cv{
         int r = a % b;
         return r < 0 ? r + b : r;
     }
+    double modd(double a, double b){
+        return a - floor(a/b)*b;
+    }
 
     enum KernelFlag {repeatEdge, loopEdge, discardEdge};
 
@@ -121,10 +140,10 @@ namespace cv{
         std::vector<T> result(input.size());
         for(int i=0; i<input.size(); i++){
             int eResult = 0;
-            VD(i);
+            // VD(i);
             for(int k=0; k<kernel.size(); k++){
                 const int iIndex = mod(i + k - kernel.size()/2, input.size());
-                VD(k);VD(i + k - kernel.size()/2);VD(iIndex);
+                // VD(k);VD(i + k - kernel.size()/2);VD(iIndex);
                 eResult += input[iIndex] * kernel[k];
             }
             result[i] = eResult;
@@ -142,26 +161,87 @@ namespace cv{
         os << ']' << std::endl;
     }
 
-    template <typename Element>
-    class RepeatingArray {
-    private:
-        Element *array;
-        int arraySize;
-    public:
-        RepeatingArray (int arraySize) : arraySize{arraySize} {
-            array = new Element[arraySize];
-        }
-        virtual ~RepeatingArray (){
-            delete array;
-        }
-        Element& operator[] (int index){
-            index = mod(index, arraySize);
-            return array[index];
-        }
-        Element operator[] (int index) const{
-            index = mod(index, arraySize);
-            return array[index];
-        }
-    };
+    /// Return in Radian [0 : PI]
+    double getLineAngle(const Point& from, const Point& to){
+        Point delta(from - to);
 
+        double angle = std::atan2(delta.y, delta.x);
+        if(angle < 0){
+            angle += CV_PI;
+        }
+
+        return angle;
+    }
+
+    double getContourAngle(const Contour& contour){
+        const int BUCKET_SPACE = 360;
+        const int HALF_CIRCLE_BUCKET_SPACE = BUCKET_SPACE;
+
+        std::vector<double> bucket(BUCKET_SPACE);
+        // double processedBucket[BUCKET_SPACE];
+        for(int c=0; c<BUCKET_SPACE; c++)
+            bucket[c] = 0;
+
+        for(int c=0; c<contour.size(); c+=10){
+            Point
+                from(contour[c]),
+                to(contour[(c+1) % contour.size()]),
+                delta(from - to);
+
+            int angle = getLineAngle(from, to) *HALF_CIRCLE_BUCKET_SPACE /(CV_PI);
+            // std::cout << angle << std::endl;
+            bucket[angle] += delta.x*delta.x + delta.y*delta.y;
+        }
+
+        const std::vector<double> kernel = {1,2,3,2,1};
+        // std::vector<double> kernel;
+        // for(int c=1; c<BUCKET_SPACE/72; c++){
+        //     kernel.push_back(const_reference __x)
+        // }
+        std::vector<double> processedBucket = applyKernel(bucket, kernel, KernelFlag::repeatEdge);
+
+        // displayContainer(std::cout, bucket.begin(), bucket.end());
+        // displayContainer(std::cout, processedBucket.begin(), processedBucket.end());
+        // std::cout << std::endl;
+
+        int maxIndex = 0;
+        double maxValue = processedBucket[0];
+        for(int c=1; c<BUCKET_SPACE; c++){
+            if(processedBucket[c] > maxValue){
+                maxIndex = c;
+                maxValue = processedBucket[c];
+            }
+        }
+
+        double angle = ((double)maxIndex) / HALF_CIRCLE_BUCKET_SPACE * CV_PI;
+
+        // if(angle < 0)
+        //     angle += CV_PI;
+
+        return angle;
+    }
+
+    /// UNTESTED
+    /// TODO test RepeatingArray
+    // template <typename Element>
+    // class RepeatingArray {
+    // private:
+    //     Element *array;
+    //     int arraySize;
+    // public:
+    //     RepeatingArray (int arraySize) : arraySize{arraySize} {
+    //         array = new Element[arraySize];
+    //     }
+    //     virtual ~RepeatingArray (){
+    //         delete array;
+    //     }
+    //     Element& operator[] (int index){
+    //         index = mod(index, arraySize);
+    //         return array[index];
+    //     }
+    //     Element operator[] (int index) const{
+    //         index = mod(index, arraySize);
+    //         return array[index];
+    //     }
+    // };
 }
