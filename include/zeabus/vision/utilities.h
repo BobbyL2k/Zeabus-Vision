@@ -17,6 +17,9 @@ namespace cv{
     typedef std::vector<Point> Contour;
     typedef std::vector<Contour> Contours;
 
+    typedef std::vector<Point2d> ContourD;
+    typedef std::vector<Contour> ContourDs;
+
     typedef Scalar Color;
 
     const double
@@ -127,17 +130,18 @@ namespace cv{
         int r = a % b;
         return r < 0 ? r + b : r;
     }
+
     double modd(double a, double b){
         return a - floor(a/b)*b;
     }
 
     enum KernelFlag {repeatEdge, loopEdge, discardEdge};
 
-    template <typename T>
-    std::vector<T> applyKernel(const std::vector<T> &input,const std::vector<T> &kernel, KernelFlag flag){
+    template <typename inputVectorType, typename kernelVectorType>
+    std::vector<inputVectorType> applyKernel(const std::vector<inputVectorType> &input,const std::vector<kernelVectorType> &kernel, KernelFlag flag){
         CV_Assert(kernel.size() % 2 == 1);
         CV_Assert(flag == repeatEdge);
-        std::vector<T> result(input.size());
+        std::vector<inputVectorType> result(input.size());
         for(int i=0; i<input.size(); i++){
             int eResult = 0;
             // VD(i);
@@ -177,6 +181,10 @@ namespace cv{
         const int BUCKET_SPACE = 360;
         const int HALF_CIRCLE_BUCKET_SPACE = BUCKET_SPACE;
 
+        std::vector<double> smoothenContour(contour.size());
+
+
+
         std::vector<double> bucket(BUCKET_SPACE);
         // double processedBucket[BUCKET_SPACE];
         for(int c=0; c<BUCKET_SPACE; c++)
@@ -193,12 +201,12 @@ namespace cv{
             bucket[angle] += delta.x*delta.x + delta.y*delta.y;
         }
 
-        const std::vector<double> kernel = {1,2,3,2,1};
-        // std::vector<double> kernel;
+        const std::vector<double> magnifyingKernel = {1,2,3,2,1};
+        // std::vector<double> magnifyingKernel;
         // for(int c=1; c<BUCKET_SPACE/72; c++){
-        //     kernel.push_back(const_reference __x)
+        //     magnifyingKernel.push_back(const_reference __x)
         // }
-        std::vector<double> processedBucket = applyKernel(bucket, kernel, KernelFlag::repeatEdge);
+        std::vector<double> processedBucket = applyKernel(bucket, magnifyingKernel, KernelFlag::repeatEdge);
 
         // displayContainer(std::cout, bucket.begin(), bucket.end());
         // displayContainer(std::cout, processedBucket.begin(), processedBucket.end());
